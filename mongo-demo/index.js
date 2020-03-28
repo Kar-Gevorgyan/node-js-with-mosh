@@ -1,16 +1,52 @@
 const mongoose = require('mongoose')
 
-mongoose.connect('mongodb://localhost/mongo-exercises')
+mongoose.connect('mongodb://localhost/mongo-exercises', {useNewUrlParser: true, useUnifiedTopology: true})
     .then(() => console.log('Connected to MongoDB...'))
     .catch(err => console.error('Could not connect to MongoDB...', err))
 
 const courseSchema = new mongoose.Schema({
-    name: String,
+    name: {
+        type: String, 
+        required: true,
+        minlength: 5,
+        maxlength: 255,
+        // match: /patern/
+    },
+    category: {
+        type: String,
+        require: true,
+        enum: ['web', 'mobile', 'network'],
+        lowercase: true,
+        // uppercase: true,
+        trim: true
+    },
     author: String,
-    tags: [String],
-    date: Date,
+    tags: {
+        type: Array,
+        validate: {
+            isAsync: true,
+            validator: function(value, callback){
+                setTimeout(() => {
+                    const result = value && value.length > 0
+                    callback(result)
+                }, 2000)
+            },
+            message: 'A course should have at least one tag'
+        }
+    },
+    date: {
+        type: Date, 
+        default: Date.now
+    },
     isPublished: Boolean,
-    price: Number
+    price: {
+        type: Number,
+        required: function() { return this.isPublished },
+        min: 10,
+        max: 200,
+        get: value => Math.round(value),
+        set: value => Math.round(value)
+    }
 })
 
 const Course = mongoose.model('Course', courseSchema)
@@ -18,30 +54,29 @@ const Course = mongoose.model('Course', courseSchema)
 async function crateCourse(){
     const course = new Course({
         name: "MERN Stack course",
+        category: 'web',
         author: 'Max',
         tags: ['react', 'frontend', 'node', 'mongodb'],
         isPublished: true,
         price: 13
     })
     
-    const result = await course.save()
-    console.log(result)
+    try{
+        const result = await course.save()
+        console.log(result)
+    }
+    catch(ex){
+        for(field in ex.errors)
+            console.log(ex.errors[field].message)
+    }
 }
 
 async function getCourses(){
     // Comparison Query
-    // eq (=)
-    // ne(!=)
-    // gt(>)
-    // gte(>=)
-    // lt(<)
-    // lte(<=)
-    // in
-    // nin(not in)
+    // eq (=), ne(!=), gt(>), gte(>=), lt(<), lte(<=), in, nin(not in)
 
     // Logical Query
-    //or
-    // and
+    //or, and
 
     // for Pagination
     const pageNumber = 2
@@ -113,4 +148,4 @@ async function removeCourse(id) {
 // crateCourse()
 // getCourses()
 // updateCourse('5e7ce7dee29c68c2ddce69d1')
-removeCourse('5e7ce7dee29c68c2ddce69d2')
+// removeCourse('5e7ce7dee29c68c2ddce69d1')
